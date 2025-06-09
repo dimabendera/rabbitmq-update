@@ -68,7 +68,7 @@ The steps below describe two approaches for upgrading a RabbitMQ broker from a p
 
 ---
 
-## Method 2: Rolling upgrade using Shovel (minimal downtime)
+## Method 2: Rolling upgrade using Shovel (minimal downtime) (it is advisable not to use - it is necessary to test and supplement)
 
 This approach is for clusters. Each node is upgraded in turn and messages are synced via the `rabbitmq_shovel` plugin.
 
