@@ -7,14 +7,6 @@ rabbitmqctl add_vhost /quorum --description "HA vhost" --default-queue-type quor
 rabbitmqctl set_permissions -p /quorum app '.*' '.*' '.*'
 ```
 
-Налаштуйте Federation:
-```bash
-rabbitmqctl set_parameter \
-    --vhost /quorum \
-    federation-upstream quorum-migration-upstream \
-    '{"uri":"amqp:///%2f","trust-user-id":true}'
-```
-
 
 Замінити в файлі '"vhost":"/",'  на '"vhost":"/quorum",'. почистіть ha-* й x-queue-mode, x-max-priority, x-overflow …
 cat migrate_queues_definitions_to_quorum.py 
@@ -137,14 +129,25 @@ python3 migrate_queues_definitions_to_quorum.py /tmp/old_definitions.json /tmp/m
 rabbitmqadmin import -V /quorum modified_definitions.json
 ```
 
-Застосовую синхрон черг тест для однієї черги
+
+Застосовую синхрон черг. Налаштуйте Federation:
 ```bash
-rabbitmqctl set_policy \
-   --vhost /quorum \
-   federate-all-queues '^.*$' \
-   '{"federation-upstream":"quorum-migration-upstream"}' \
-   --apply-to queues \
-   --priority 10
+rabbitmqctl set_parameter --vhost /quorum \
+  federation-upstream quorum-migration-upstream \
+  '{
+     "uri":"amqp:///%2f",
+     "queue-type":"quorum",
+     "ack-mode":"on-publish",
+     "max-hops":1,
+     "expires":0,
+     "trust-user-id":true
+   }'
+   
+  
+rabbitmqctl set_policy --vhost /quorum \
+  queue-federation '^(?!amq\\.).*' \
+  '{"federation-upstream-set":"migration"}' \
+  --apply-to queues --priority 10
 ```
 
 Черги не заповняться автоматично – Federation притягне повідомлення тільки під споживачів. 
@@ -152,3 +155,7 @@ rabbitmqctl set_policy \
 Коли все з’їдено – старий vhost можна вимкнути.
 
 Усюди в конфіг файлі додати vhost: "/quorum"
+
+
+
+
